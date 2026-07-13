@@ -1,38 +1,57 @@
 const express = require('express');
-const sqlite3 = require('sqlite3').verbose();
+const fs = require('fs');
 const path = require('path');
+const initSqlJs = require('sql.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const DB_PATH = path.join(__dirname, 'expenses.db');
 
-const db = new sqlite3.Database('./expenses.db', (err) => {
-  if (err) {
-    console.error('Database connection error:', err.message);
+let db = null;
+
+async function initDB() {
+  const SQL = await initSqlJs({
+    locateFile: file => `node_modules/sql.js/dist/${file}`
+  });
+  
+  if (fs.existsSync(DB_PATH)) {
+    const data = fs.readFileSync(DB_PATH);
+    db = new SQL.Database(new Uint8Array(data));
+    console.log('Database loaded from file');
   } else {
-    console.log('Connected to SQLite database');
+    db = new SQL.Database();
+    db.run(`
+      CREATE TABLE expenses (
+        id TEXT PRIMARY KEY,
+        amount REAL NOT NULL,
+        category TEXT NOT NULL,
+        date TEXT NOT NULL,
+        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+      )
+    `);
+    saveDB();
+    console.log('New database created');
   }
-});
+}
 
-db.run(`
-  CREATE TABLE IF NOT EXISTS expenses (
-    id TEXT PRIMARY KEY,
-    amount REAL NOT NULL,
-    category TEXT NOT NULL,
-    date TEXT NOT NULL,
-    created_at INTEGER DEFAULT (strftime('%s', 'now'))
-  )
-`);
+function saveDB() {
+  if (db) {
+    const data = db.export();
+    fs.writeFileSync(DB_PATH, Buffer.from(data));
+  }
+}
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '.')));
 
 app.get('/api/expenses', (req, res) => {
-  db.all('SELECT * FROM expenses ORDER BY date DESC, created_at DESC', [], (err, rows) => {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    res.json(rows);
-  });
+  const stmt = db.prepare('SELECT * FROM expenses ORDER BY date DESC, created_at DESC');
+  const expenses = [];
+  while (stmt.step()) {
+    expenses.push(stmt.getAsObject());
+  }
+  stmt.free();
+  res.json(expenses);
 });
 
 app.post('/api/expenses', (req, res) => {
@@ -52,37 +71,38 @@ app.post('/api/expenses', (req, res) => {
   
   const id = Date.now().toString();
   db.run('INSERT INTO expenses (id, amount, category, date) VALUES (?, ?, ?, ?)', 
-    [id, parseFloat(amount), category, date], 
-    function(err) {
-      if (err) {
-        return res.status(500).json({ error: err.message });
-      }
-      const newExpense = { id, amount: parseFloat(amount), category, date };
-      res.status(201).json(newExpense);
-    }
+    [id, parseFloat(amount), category, date]
   );
+  saveDB();
+  
+  const newExpense = { id, amount: parseFloat(amount), category, date };
+  res.status(201).json(newExpense);
 });
 
 app.delete('/api/expenses/:id', (req, res) => {
   const { id } = req.params;
   
-  db.run('DELETE FROM expenses WHERE id = ?', [id], function(err) {
-    if (err) {
-      return res.status(500).json({ error: err.message });
-    }
-    
-    if (this.changes === 0) {
-      return res.status(404).json({ error: '记录不存在' });
-    }
-    
-    res.json({ success: true });
-  });
+  const stmt = db.prepare('DELETE FROM expenses WHERE id = ?');
+  const result = stmt.run([id]);
+  stmt.free();
+  
+  if (!result.changes) {
+    return res.status(404).json({ error: '记录不存在' });
+  }
+  
+  saveDB();
+  res.json({ success: true });
 });
 
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
 
-app.listen(PORT, () => {
-  console.log(`Server running on http://localhost:${PORT}`);
+initDB().then(() => {
+  app.listen(PORT, () => {
+    console.log(`Server running on http://localhost:${PORT}`);
+  });
+}).catch(err => {
+  console.error('Failed to initialize database:', err);
+  process.exit(1);
 });
