@@ -1,0 +1,13 @@
+{
+  "name": "simple-expense-tracker",
+  "version": "1.0.0",
+  "description": "极简记账应用",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "sqlite3": "^6.0.1"
+  }
+}
