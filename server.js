@@ -1,61 +1,39 @@
 const express = require('express');
-const fs = require('fs');
 const path = require('path');
-const initSqlJs = require('sql.js');
+const { Pool } = require('pg');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'expenses.db');
 
-let db = null;
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: {
+    rejectUnauthorized: false
+  }
+});
 
 async function initDB() {
-  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
-  
-  const SQL = await initSqlJs({
-    locateFile: file => `node_modules/sql.js/dist/${file}`
-  });
-  
-  if (fs.existsSync(DB_PATH)) {
-    const data = fs.readFileSync(DB_PATH);
-    db = new SQL.Database(new Uint8Array(data));
-    console.log('Database loaded from file');
-    
-    try {
-      db.run('ALTER TABLE expenses ADD COLUMN note TEXT');
-      saveDB();
-      console.log('Added note column to expenses table');
-    } catch (e) {
-      console.log('Note column already exists');
-    }
-  } else {
-    db = new SQL.Database();
-    db.run(`
-      CREATE TABLE expenses (
+  try {
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS expenses (
         id TEXT PRIMARY KEY,
         amount REAL NOT NULL,
         category TEXT NOT NULL,
         date TEXT NOT NULL,
         note TEXT,
-        created_at INTEGER DEFAULT (strftime('%s', 'now'))
+        created_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW()))
       )
     `);
-    saveDB();
-    console.log('New database created');
-  }
-}
-
-function saveDB() {
-  if (db) {
-    const data = db.export();
-    fs.writeFileSync(DB_PATH, Buffer.from(data));
+    console.log('Database initialized');
+  } catch (error) {
+    console.error('Failed to initialize database:', error);
   }
 }
 
 app.use(express.json());
 app.use(express.static(path.join(__dirname, '.')));
 
-app.get('/api/expenses', (req, res) => {
+app.get('/api/expenses', async (req, res) => {
   const { start, end } = req.query;
   
   let sql = 'SELECT * FROM expenses';
@@ -65,11 +43,11 @@ app.get('/api/expenses', (req, res) => {
     sql += ' WHERE ';
     const conditions = [];
     if (start) {
-      conditions.push('date >= ?');
+      conditions.push('date >= $1');
       params.push(start);
     }
     if (end) {
-      conditions.push('date <= ?');
+      conditions.push('date <= $' + (params.length + 1));
       params.push(end);
     }
     sql += conditions.join(' AND ');
@@ -77,19 +55,16 @@ app.get('/api/expenses', (req, res) => {
   
   sql += ' ORDER BY date DESC, created_at DESC';
   
-  const stmt = db.prepare(sql);
-  const expenses = [];
-  if (params.length > 0) {
-    stmt.bind(params);
+  try {
+    const result = await pool.query(sql, params);
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching expenses:', error);
+    res.status(500).json({ error: '获取数据失败' });
   }
-  while (stmt.step()) {
-    expenses.push(stmt.getAsObject());
-  }
-  stmt.free();
-  res.json(expenses);
 });
 
-app.post('/api/expenses', (req, res) => {
+app.post('/api/expenses', async (req, res) => {
   const { amount, category, date, note } = req.body;
   
   if (!amount || amount <= 0) {
@@ -105,38 +80,45 @@ app.post('/api/expenses', (req, res) => {
   }
   
   const id = Date.now().toString();
-  db.run('INSERT INTO expenses (id, amount, category, date, note) VALUES (?, ?, ?, ?, ?)', 
-    [id, parseFloat(amount), category, date, note || '']
-  );
-  saveDB();
   
-  const newExpense = { id, amount: parseFloat(amount), category, date, note: note || '' };
-  res.status(201).json(newExpense);
+  try {
+    const result = await pool.query(
+      'INSERT INTO expenses (id, amount, category, date, note) VALUES ($1, $2, $3, $4, $5) RETURNING *',
+      [id, parseFloat(amount), category, date, note || '']
+    );
+    
+    res.status(201).json(result.rows[0]);
+  } catch (error) {
+    console.error('Error inserting expense:', error);
+    res.status(500).json({ error: '保存失败' });
+  }
 });
 
-app.delete('/api/expenses/:id', (req, res) => {
+app.delete('/api/expenses/:id', async (req, res) => {
   const { id } = req.params;
   
-  const stmt = db.prepare('DELETE FROM expenses WHERE id = ?');
-  const result = stmt.run([id]);
-  stmt.free();
-  
-  if (!result.changes) {
-    return res.status(404).json({ error: '记录不存在' });
+  try {
+    const result = await pool.query('DELETE FROM expenses WHERE id = $1', [id]);
+    
+    if (result.rowCount === 0) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+    
+    res.json({ success: true });
+  } catch (error) {
+    console.error('Error deleting expense:', error);
+    res.status(500).json({ error: '删除失败' });
   }
-  
-  saveDB();
-  res.json({ success: true });
 });
 
-app.get('/api/debug', (req, res) => {
-  const stmt = db.prepare('SELECT * FROM expenses ORDER BY date DESC, created_at DESC');
-  const expenses = [];
-  while (stmt.step()) {
-    expenses.push(stmt.getAsObject());
+app.get('/api/debug', async (req, res) => {
+  try {
+    const result = await pool.query('SELECT * FROM expenses ORDER BY date DESC, created_at DESC');
+    res.json(result.rows);
+  } catch (error) {
+    console.error('Error fetching debug data:', error);
+    res.status(500).json({ error: '获取数据失败' });
   }
-  stmt.free();
-  res.json(expenses);
 });
 
 app.get('*', (req, res) => {
