@@ -10,6 +10,8 @@ const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'expenses.db');
 let db = null;
 
 async function initDB() {
+  fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
+  
   const SQL = await initSqlJs({
     locateFile: file => `node_modules/sql.js/dist/${file}`
   });
