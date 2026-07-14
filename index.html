@@ -25,13 +25,45 @@
         
         header {
             text-align: center;
-            margin-bottom: 24px;
+            margin-bottom: 20px;
         }
         
         header h1 {
             font-size: 28px;
             color: #1a1a2e;
             font-weight: 600;
+        }
+        
+        .nav-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: white;
+            padding: 6px;
+            border-radius: 12px;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+        }
+        
+        .nav-tab {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            background: transparent;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+        }
+        
+        .nav-tab.active {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
         }
         
         .month-selector {
@@ -104,8 +136,17 @@
             color: white;
         }
         
-        .stat-card:last-child {
+        .stat-card.income {
+            background: linear-gradient(135deg, #11998e 0%, #38ef7d 100%);
+        }
+        
+        .stat-card.expense {
             background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        
+        .stat-card.balance {
+            background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+            grid-column: span 2;
         }
         
         .stat-label {
@@ -145,7 +186,8 @@
         
         input[type="number"],
         select,
-        input[type="date"] {
+        input[type="date"],
+        input[type="text"] {
             width: 100%;
             padding: 12px 16px;
             border: 2px solid #e0e0e0;
@@ -157,7 +199,8 @@
         
         input[type="number"]:focus,
         select:focus,
-        input[type="date"]:focus {
+        input[type="date"]:focus,
+        input[type="text"]:focus {
             border-color: #667eea;
         }
         
@@ -253,6 +296,9 @@
         .category-shopping { background: #fff8f0; }
         .category-entertainment { background: #f0fff0; }
         .category-other { background: #fafafa; }
+        .category-salary { background: #e8f5e9; }
+        .category-bonus { background: #e3f2fd; }
+        .category-transfer { background: #f3e5f5; }
         
         .expense-info {
             display: flex;
@@ -287,7 +333,18 @@
         .expense-amount {
             font-size: 18px;
             font-weight: 600;
+        }
+        
+        .expense-amount.income {
+            color: #27ae60;
+        }
+        
+        .expense-amount.expense {
             color: #e74c3c;
+        }
+        
+        .expense-amount.transfer {
+            color: #9b59b6;
         }
         
         .delete-btn {
@@ -321,7 +378,8 @@
             margin-top: 8px;
         }
         
-        .category-select {
+        .category-select,
+        .account-select {
             appearance: none;
             background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%236b7280' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
             background-position: right 0.75rem center;
@@ -330,20 +388,84 @@
             padding-right: 2.5rem;
         }
         
-        .date-filter {
+        .transfer-arrow {
+            text-align: center;
+            font-size: 20px;
+            color: #999;
+            margin: 8px 0;
+        }
+        
+        .accounts-section {
+            background: white;
+            border-radius: 16px;
+            padding: 20px;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+            margin-bottom: 24px;
+        }
+        
+        .accounts-header {
             display: flex;
-            gap: 12px;
+            justify-content: space-between;
+            align-items: center;
             margin-bottom: 16px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #f0f0f0;
         }
         
-        .date-filter input {
-            flex: 1;
-            padding: 10px;
+        .accounts-header h2 {
+            font-size: 18px;
+            color: #1a1a2e;
         }
         
-        .date-filter button {
-            padding: 10px 16px;
-            font-size: 14px;
+        .accounts-total {
+            font-size: 20px;
+            font-weight: 700;
+            color: #667eea;
+        }
+        
+        .account-list {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+        }
+        
+        .account-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px;
+            background: #f8f9fa;
+            border-radius: 12px;
+        }
+        
+        .account-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        
+        .account-icon {
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            background: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
+        }
+        
+        .account-name {
+            font-size: 15px;
+            font-weight: 500;
+            color: #1a1a2e;
+        }
+        
+        .account-balance {
+            font-size: 18px;
+            font-weight: 600;
+            color: #1a1a2e;
         }
     </style>
 </head>
@@ -352,6 +474,18 @@
         <header>
             <h1>极简记账</h1>
         </header>
+        
+        <div class="nav-tabs">
+            <button class="nav-tab active" onclick="switchTab('expense')">
+                <span>📝</span> 支出
+            </button>
+            <button class="nav-tab" onclick="switchTab('income')">
+                <span>💰</span> 收入
+            </button>
+            <button class="nav-tab" onclick="switchTab('transfer')">
+                <span>🔄</span> 转账
+            </button>
+        </div>
         
         <div class="month-selector">
             <button class="month-btn" onclick="prevMonth()">‹</button>
@@ -363,14 +497,26 @@
         </div>
         
         <div class="stats">
-            <div class="stat-card">
+            <div class="stat-card income">
+                <div class="stat-label">本月收入</div>
+                <div class="stat-value" id="monthIncome">¥0.00</div>
+            </div>
+            <div class="stat-card expense">
                 <div class="stat-label">本月支出</div>
-                <div class="stat-value" id="monthTotal">¥0.00</div>
+                <div class="stat-value" id="monthExpense">¥0.00</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-label">记录笔数</div>
-                <div class="stat-value" id="recordCount">0</div>
+            <div class="stat-card balance">
+                <div class="stat-label">本月结余</div>
+                <div class="stat-value" id="monthBalance">¥0.00</div>
             </div>
+        </div>
+        
+        <div class="accounts-section" id="accountsSection">
+            <div class="accounts-header">
+                <h2>资金总览</h2>
+                <span class="accounts-total" id="totalBalance">¥0.00</span>
+            </div>
+            <div class="account-list" id="accountList"></div>
         </div>
         
         <div class="form-section">
@@ -379,7 +525,7 @@
                 <input type="number" id="amount" placeholder="0.00" step="0.01" min="0">
             </div>
             
-            <div class="form-group">
+            <div class="form-group" id="categoryGroup">
                 <label for="category">分类</label>
                 <select id="category" class="category-select">
                     <option value="餐饮">餐饮</option>
@@ -388,6 +534,17 @@
                     <option value="娱乐">娱乐</option>
                     <option value="其他">其他</option>
                 </select>
+            </div>
+            
+            <div class="form-group" id="accountGroup">
+                <label for="account">账户</label>
+                <select id="account" class="account-select"></select>
+            </div>
+            
+            <div class="form-group" id="toAccountGroup" style="display: none;">
+                <div class="transfer-arrow">→</div>
+                <label for="toAccount">转入账户</label>
+                <select id="toAccount" class="account-select"></select>
             </div>
             
             <div class="form-group">
@@ -400,12 +557,12 @@
                 <input type="text" id="note" placeholder="">
             </div>
             
-            <button onclick="addExpense()">保存</button>
+            <button onclick="addRecord()">保存</button>
         </div>
         
         <div class="list-section">
             <div class="list-header">
-                <h2>支出记录</h2>
+                <h2 id="listTitle">支出记录</h2>
                 <span class="list-count" id="listCount">0 笔</span>
             </div>
             <ul class="expense-list" id="expenseList"></ul>
@@ -418,11 +575,19 @@
             '交通': { icon: '🚗', class: 'category-transport' },
             '购物': { icon: '🛍️', class: 'category-shopping' },
             '娱乐': { icon: '🎮', class: 'category-entertainment' },
-            '其他': { icon: '📝', class: 'category-other' }
+            '其他': { icon: '📝', class: 'category-other' },
+            '工资': { icon: '💼', class: 'category-salary' },
+            '奖金': { icon: '🎁', class: 'category-bonus' },
+            '转账': { icon: '🔄', class: 'category-transfer' }
         };
+        
+        const incomeCategories = ['工资', '奖金', '其他'];
+        const expenseCategories = ['餐饮', '交通', '购物', '娱乐', '其他'];
         
         let currentYear = new Date().getFullYear();
         let currentMonth = new Date().getMonth();
+        let currentTab = 'expense';
+        let accounts = [];
         
         function formatDate(dateStr) {
             const date = new Date(dateStr);
@@ -477,28 +642,128 @@
             refreshData();
         }
         
+        function switchTab(tab) {
+            currentTab = tab;
+            document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+            document.querySelector(`.nav-tab[onclick="switchTab('${tab}')"]`).classList.add('active');
+            
+            const categorySelect = document.getElementById('category');
+            const accountGroup = document.getElementById('accountGroup');
+            const toAccountGroup = document.getElementById('toAccountGroup');
+            const listTitle = document.getElementById('listTitle');
+            
+            if (tab === 'income') {
+                categorySelect.innerHTML = incomeCategories.map(cat => 
+                    `<option value="${cat}">${cat}</option>`
+                ).join('');
+                accountGroup.style.display = 'block';
+                toAccountGroup.style.display = 'none';
+                listTitle.textContent = '收入记录';
+            } else if (tab === 'transfer') {
+                categorySelect.innerHTML = '<option value="转账">转账</option>';
+                accountGroup.style.display = 'block';
+                toAccountGroup.style.display = 'block';
+                listTitle.textContent = '转账记录';
+            } else {
+                categorySelect.innerHTML = expenseCategories.map(cat => 
+                    `<option value="${cat}">${cat}</option>`
+                ).join('');
+                accountGroup.style.display = 'block';
+                toAccountGroup.style.display = 'none';
+                listTitle.textContent = '支出记录';
+            }
+            
+            refreshData();
+        }
+        
+        async function loadAccounts() {
+            try {
+                const response = await fetch('/api/accounts');
+                accounts = await response.json();
+                
+                const accountSelect = document.getElementById('account');
+                const toAccountSelect = document.getElementById('toAccount');
+                
+                const options = accounts.map(acc => 
+                    `<option value="${acc.id}">${acc.icon} ${acc.name}</option>`
+                ).join('');
+                
+                accountSelect.innerHTML = options;
+                toAccountSelect.innerHTML = options;
+            } catch (error) {
+                console.error('获取账户失败:', error);
+            }
+        }
+        
         async function getExpenses() {
             const { startDate, endDateStr } = getMonthRange(currentYear, currentMonth);
             try {
-                const response = await fetch(`/api/expenses?start=${startDate}&end=${endDateStr}`);
-                return await response.json();
+                const response = await fetch(`/api/expenses?start=${startDate}&end=${endDateStr}&type=${currentTab}`);
+                const data = await response.json();
+                return data.error ? [] : data;
             } catch (error) {
                 console.error('获取数据失败:', error);
                 return [];
             }
         }
         
+        async function getStats() {
+            const { startDate, endDateStr } = getMonthRange(currentYear, currentMonth);
+            try {
+                const response = await fetch(`/api/stats?start=${startDate}&end=${endDateStr}`);
+                const data = await response.json();
+                return data.error ? { income: 0, expense: 0 } : data;
+            } catch (error) {
+                console.error('获取统计数据失败:', error);
+                return { income: 0, expense: 0 };
+            }
+        }
+        
+        async function getAccountBalances() {
+            try {
+                const response = await fetch('/api/account-balances');
+                const data = await response.json();
+                return data.error ? { accounts: [], totalBalance: 0 } : data;
+            } catch (error) {
+                console.error('获取账户余额失败:', error);
+                return { accounts: [], totalBalance: 0 };
+            }
+        }
+        
         async function calculateStats() {
-            const expenses = await getExpenses();
-            let monthTotal = 0;
+            const stats = await getStats();
             
-            expenses.forEach(item => {
-                monthTotal += parseFloat(item.amount);
-            });
+            document.getElementById('monthIncome').textContent = `¥${stats.income.toFixed(2)}`;
+            document.getElementById('monthExpense').textContent = `¥${stats.expense.toFixed(2)}`;
             
-            document.getElementById('monthTotal').textContent = `¥${monthTotal.toFixed(2)}`;
-            document.getElementById('recordCount').textContent = expenses.length;
-            document.getElementById('listCount').textContent = `${expenses.length} 笔`;
+            const balance = stats.income - stats.expense;
+            document.getElementById('monthBalance').textContent = `${balance >= 0 ? '' : '-'}¥${Math.abs(balance).toFixed(2)}`;
+        }
+        
+        async function renderAccountList() {
+            const balances = await getAccountBalances();
+            const list = document.getElementById('accountList');
+            
+            document.getElementById('totalBalance').textContent = `¥${balances.totalBalance.toFixed(2)}`;
+            
+            if (balances.accounts.length === 0) {
+                list.innerHTML = `
+                    <div class="empty-state">
+                        <p>暂无账户</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            list.innerHTML = balances.accounts.map(acc => `
+                <div class="account-item">
+                    <div class="account-left">
+                        <div class="account-icon">${acc.icon}</div>
+                        <div class="account-name">${acc.name}</div>
+                    </div>
+                    <div class="account-balance">¥${acc.balance.toFixed(2)}</div>
+                </div>
+            `).join('');
         }
         
         async function renderList() {
@@ -506,20 +771,45 @@
             const list = document.getElementById('expenseList');
             
             if (expenses.length === 0) {
+                const tabNames = { expense: '支出', income: '收入', transfer: '转账' };
                 list.innerHTML = `
                     <div class="empty-state">
                         <div style="font-size: 48px; margin-bottom: 16px;">📝</div>
-                        <p>${currentYear}年${currentMonth + 1}月没有支出记录</p>
+                        <p>${currentYear}年${currentMonth + 1}月没有${tabNames[currentTab]}记录</p>
                     </div>
                 `;
+                document.getElementById('listCount').textContent = '0 笔';
                 return;
             }
             
             expenses.sort((a, b) => new Date(b.date) - new Date(a.date));
             
+            document.getElementById('listCount').textContent = `${expenses.length} 笔`;
+            
             list.innerHTML = expenses.map(item => {
                 const cat = categories[item.category] || categories['其他'];
                 const noteHtml = item.note ? `<div class="expense-note">${item.note}</div>` : '';
+                
+                let amountClass = 'expense';
+                let amountPrefix = '-';
+                if (item.type === 'income') {
+                    amountClass = 'income';
+                    amountPrefix = '+';
+                } else if (item.type === 'transfer') {
+                    amountClass = 'transfer';
+                    amountPrefix = '';
+                }
+                
+                const fromAccount = accounts.find(a => a.id === item.account);
+                const toAccount = accounts.find(a => a.id === item.to_account);
+                
+                let accountHtml = '';
+                if (item.type === 'transfer' && fromAccount && toAccount) {
+                    accountHtml = `<div class="expense-date">${fromAccount.name} → ${toAccount.name}</div>`;
+                } else if (fromAccount) {
+                    accountHtml = `<div class="expense-date">${fromAccount.icon} ${fromAccount.name}</div>`;
+                }
+                
                 return `
                     <li class="expense-item" data-id="${item.id}">
                         <div class="expense-left">
@@ -527,11 +817,12 @@
                             <div class="expense-info">
                                 <div class="expense-category">${item.category}</div>
                                 ${noteHtml}
+                                ${accountHtml}
                                 <div class="expense-date">${formatDate(item.date)}</div>
                             </div>
                         </div>
                         <div class="expense-right">
-                            <div class="expense-amount">-¥${parseFloat(item.amount).toFixed(2)}</div>
+                            <div class="expense-amount ${amountClass}">${amountPrefix}¥${parseFloat(item.amount).toFixed(2)}</div>
                             <button class="delete-btn" onclick="deleteExpense('${item.id}')">×</button>
                         </div>
                     </li>
@@ -541,12 +832,15 @@
         
         async function refreshData() {
             await calculateStats();
+            await renderAccountList();
             await renderList();
         }
         
-        async function addExpense() {
+        async function addRecord() {
             const amount = document.getElementById('amount').value;
             const category = document.getElementById('category').value;
+            const account = document.getElementById('account').value;
+            const toAccount = document.getElementById('toAccount').value;
             const date = document.getElementById('date').value;
             const note = document.getElementById('note').value;
             
@@ -560,13 +854,36 @@
                 return;
             }
             
+            if (!account) {
+                alert('请选择账户');
+                return;
+            }
+            
+            if (currentTab === 'transfer' && !toAccount) {
+                alert('请选择转入账户');
+                return;
+            }
+            
+            if (currentTab === 'transfer' && account === toAccount) {
+                alert('转入账户不能与转出账户相同');
+                return;
+            }
+            
             try {
                 await fetch('/api/expenses', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ amount, category, date, note })
+                    body: JSON.stringify({ 
+                        type: currentTab,
+                        amount, 
+                        category, 
+                        account, 
+                        to_account: toAccount,
+                        date, 
+                        note 
+                    })
                 });
                 
                 document.getElementById('amount').value = '';
@@ -607,6 +924,7 @@
             document.getElementById('date').value = today;
             
             updateMonthDisplay();
+            await loadAccounts();
             await refreshData();
         });
     </script>
