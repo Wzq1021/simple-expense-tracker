@@ -6,22 +6,22 @@
     <title>极简记账</title>
     <style>
         :root {
-            --primary: #6366f1;
-            --primary-dark: #4f46e5;
-            --primary-light: #818cf8;
-            --secondary: #f43f5e;
-            --success: #10b981;
-            --warning: #f59e0b;
-            --text-primary: #1e293b;
-            --text-secondary: #64748b;
-            --text-tertiary: #94a3b8;
+            --primary: #6c9b7b;
+            --primary-dark: #5a8a6a;
+            --primary-light: #8cb89a;
+            --secondary: #f5a66b;
+            --success: #7db595;
+            --warning: #f0c88a;
+            --text-primary: #3d4849;
+            --text-secondary: #7a8c8d;
+            --text-tertiary: #a8b5b6;
             --bg-primary: #ffffff;
-            --bg-secondary: #f8fafc;
-            --bg-tertiary: #f1f5f9;
-            --border: #e2e8f0;
-            --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
-            --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-            --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            --bg-secondary: #faf7f2;
+            --bg-tertiary: #f2ede5;
+            --border: #e8e2d9;
+            --shadow-sm: 0 1px 3px rgba(108, 155, 123, 0.08);
+            --shadow-md: 0 4px 12px rgba(108, 155, 123, 0.1);
+            --shadow-lg: 0 8px 20px rgba(108, 155, 123, 0.12);
             --radius-sm: 8px;
             --radius-md: 12px;
             --radius-lg: 16px;
@@ -753,17 +753,17 @@
         }
 
         .ranking-index.top1 {
-            background: linear-gradient(135deg, #fcd34d 0%, #f59e0b 100%);
+            background: linear-gradient(135deg, var(--warning) 0%, var(--secondary) 100%);
             color: white;
         }
 
         .ranking-index.top2 {
-            background: linear-gradient(135deg, #cbd5e1 0%, #94a3b8 100%);
+            background: linear-gradient(135deg, var(--text-tertiary) 0%, var(--text-secondary) 100%);
             color: white;
         }
 
         .ranking-index.top3 {
-            background: linear-gradient(135deg, #fdba74 0%, #f97316 100%);
+            background: linear-gradient(135deg, var(--secondary) 0%, #e88a5b 100%);
             color: white;
         }
 
@@ -800,7 +800,7 @@
         }
 
         .accounts-header {
-            background: linear-gradient(135deg, #8b5cf6 0%, #6366f1 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--success) 100%);
             padding: 32px 20px;
             color: white;
         }
@@ -1079,7 +1079,7 @@
         }
 
         .banner-card {
-            background: linear-gradient(135deg, var(--primary) 0%, #6366f1 100%);
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
             border-radius: var(--radius-xl);
             padding: 20px;
             position: relative;
@@ -1329,31 +1329,31 @@
                 </div>
                 <div class="category-scroll" id="quickCategories">
                     <div class="category-item" onclick="openBottomSheet('expense')">
-                        <div class="category-icon" style="background: #fef2f2;">🍜</div>
+                        <div class="category-icon" style="background: #f9ede3;">🍜</div>
                         <div class="category-name">餐饮</div>
                     </div>
                     <div class="category-item" onclick="openBottomSheet('expense')">
-                        <div class="category-icon" style="background: #eff6ff;">🚗</div>
+                        <div class="category-icon" style="background: #e8f3eb;">🚗</div>
                         <div class="category-name">交通</div>
                     </div>
                     <div class="category-item" onclick="openBottomSheet('expense')">
-                        <div class="category-icon" style="background: #fffbeb;">🛍️</div>
+                        <div class="category-icon" style="background: #fdf6e8;">🛍️</div>
                         <div class="category-name">购物</div>
                     </div>
                     <div class="category-item" onclick="openBottomSheet('expense')">
-                        <div class="category-icon" style="background: #f5f3ff;">🎮</div>
+                        <div class="category-icon" style="background: #f2f7f3;">🎮</div>
                         <div class="category-name">娱乐</div>
                     </div>
                     <div class="category-item" onclick="openBottomSheet('expense')">
-                        <div class="category-icon" style="background: #ecfeff;">🏠</div>
+                        <div class="category-icon" style="background: #ebf4f0;">🏠</div>
                         <div class="category-name">居住</div>
                     </div>
                     <div class="category-item" onclick="openBottomSheet('income')">
-                        <div class="category-icon" style="background: #ecfdf5;">💼</div>
+                        <div class="category-icon" style="background: #dcebe3;">💼</div>
                         <div class="category-name">工资</div>
                     </div>
                     <div class="category-item" onclick="openBottomSheet('transfer')">
-                        <div class="category-icon" style="background: #eef2ff;">🔄</div>
+                        <div class="category-icon" style="background: #f0ebe3;">🔄</div>
                         <div class="category-name">转账</div>
                     </div>
                 </div>
@@ -1458,21 +1458,21 @@
                 </div>
                 <div class="discover-grid">
                     <div class="discover-card" onclick="exportData()">
-                        <div class="discover-icon" style="background: #ecfdf5; color: #10b981;">📤</div>
+                        <div class="discover-icon" style="background: #dcebe3; color: var(--primary);">📤</div>
                         <div class="discover-title">数据导出</div>
                         <div class="discover-badge">CSV</div>
                     </div>
                     <div class="discover-card" onclick="showBudgetModal()">
-                        <div class="discover-icon" style="background: #fffbeb; color: #f59e0b;">🎯</div>
+                        <div class="discover-icon" style="background: #fdf6e8; color: var(--secondary);">🎯</div>
                         <div class="discover-title">预算设置</div>
                         <div class="discover-badge">新</div>
                     </div>
                     <div class="discover-card" onclick="showCategories()">
-                        <div class="discover-icon" style="background: #f5f3ff; color: #8b5cf6;">🏷️</div>
+                        <div class="discover-icon" style="background: #e8f3eb; color: var(--success);">🏷️</div>
                         <div class="discover-title">分类管理</div>
                     </div>
                     <div class="discover-card" onclick="showAbout()">
-                        <div class="discover-icon" style="background: #eff6ff; color: #3b82f6;">ℹ️</div>
+                        <div class="discover-icon" style="background: #f0ebe3; color: var(--text-secondary);">ℹ️</div>
                         <div class="discover-title">关于我们</div>
                     </div>
                 </div>
@@ -1514,21 +1514,21 @@
                 <div class="settings-list">
                     <div class="settings-item" onclick="showPrivacy()">
                         <div class="settings-left">
-                            <div class="settings-icon" style="background: #eff6ff; color: #3b82f6;">🔒</div>
+                            <div class="settings-icon" style="background: #e8f3eb; color: var(--primary);">🔒</div>
                             <div class="settings-name">隐私安全</div>
                         </div>
                         <div class="settings-arrow">›</div>
                     </div>
                     <div class="settings-item" onclick="showFeedback()">
                         <div class="settings-left">
-                            <div class="settings-icon" style="background: #f5f3ff; color: #8b5cf6;">💬</div>
+                            <div class="settings-icon" style="background: #fdf6e8; color: var(--secondary);">💬</div>
                             <div class="settings-name">意见反馈</div>
                         </div>
                         <div class="settings-arrow">›</div>
                     </div>
                     <div class="settings-item" onclick="if(confirm('确定要清空所有数据吗？此操作不可恢复！')) clearAllData()">
                         <div class="settings-left">
-                            <div class="settings-icon" style="background: #fef2f2; color: #ef4444;">🗑️</div>
+                            <div class="settings-icon" style="background: #f9ede3; color: #d4756a;">🗑️</div>
                             <div class="settings-name">清空数据</div>
                         </div>
                         <div class="settings-arrow">›</div>
