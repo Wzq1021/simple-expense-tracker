@@ -18,6 +18,14 @@ async function initDB() {
     const data = fs.readFileSync(DB_PATH);
     db = new SQL.Database(new Uint8Array(data));
     console.log('Database loaded from file');
+    
+    try {
+      db.run('ALTER TABLE expenses ADD COLUMN note TEXT');
+      saveDB();
+      console.log('Added note column to expenses table');
+    } catch (e) {
+      console.log('Note column already exists');
+    }
   } else {
     db = new SQL.Database();
     db.run(`
@@ -26,6 +34,7 @@ async function initDB() {
         amount REAL NOT NULL,
         category TEXT NOT NULL,
         date TEXT NOT NULL,
+        note TEXT,
         created_at INTEGER DEFAULT (strftime('%s', 'now'))
       )
     `);
@@ -79,7 +88,7 @@ app.get('/api/expenses', (req, res) => {
 });
 
 app.post('/api/expenses', (req, res) => {
-  const { amount, category, date } = req.body;
+  const { amount, category, date, note } = req.body;
   
   if (!amount || amount <= 0) {
     return res.status(400).json({ error: '请输入有效的金额' });
@@ -94,12 +103,12 @@ app.post('/api/expenses', (req, res) => {
   }
   
   const id = Date.now().toString();
-  db.run('INSERT INTO expenses (id, amount, category, date) VALUES (?, ?, ?, ?)', 
-    [id, parseFloat(amount), category, date]
+  db.run('INSERT INTO expenses (id, amount, category, date, note) VALUES (?, ?, ?, ?, ?)', 
+    [id, parseFloat(amount), category, date, note || '']
   );
   saveDB();
   
-  const newExpense = { id, amount: parseFloat(amount), category, date };
+  const newExpense = { id, amount: parseFloat(amount), category, date, note: note || '' };
   res.status(201).json(newExpense);
 });
 
@@ -116,6 +125,16 @@ app.delete('/api/expenses/:id', (req, res) => {
   
   saveDB();
   res.json({ success: true });
+});
+
+app.get('/api/debug', (req, res) => {
+  const stmt = db.prepare('SELECT * FROM expenses ORDER BY date DESC, created_at DESC');
+  const expenses = [];
+  while (stmt.step()) {
+    expenses.push(stmt.getAsObject());
+  }
+  stmt.free();
+  res.json(expenses);
 });
 
 app.get('*', (req, res) => {

@@ -271,6 +271,13 @@
             color: #999;
         }
         
+        .expense-note {
+            font-size: 13px;
+            color: #666;
+            font-style: italic;
+            margin-top: 2px;
+        }
+        
         .expense-right {
             display: flex;
             align-items: center;
@@ -386,6 +393,11 @@
             <div class="form-group">
                 <label for="date">日期</label>
                 <input type="date" id="date">
+            </div>
+            
+            <div class="form-group">
+                <label for="note">备注（可选）</label>
+                <input type="text" id="note" placeholder="例如：老乡鸡、滴滴打车...">
             </div>
             
             <button onclick="addExpense()">保存</button>
@@ -507,12 +519,14 @@
             
             list.innerHTML = expenses.map(item => {
                 const cat = categories[item.category] || categories['其他'];
+                const noteHtml = item.note ? `<div class="expense-note">${item.note}</div>` : '';
                 return `
                     <li class="expense-item" data-id="${item.id}">
                         <div class="expense-left">
                             <div class="category-icon ${cat.class}">${cat.icon}</div>
                             <div class="expense-info">
                                 <div class="expense-category">${item.category}</div>
+                                ${noteHtml}
                                 <div class="expense-date">${formatDate(item.date)}</div>
                             </div>
                         </div>
@@ -534,6 +548,7 @@
             const amount = document.getElementById('amount').value;
             const category = document.getElementById('category').value;
             const date = document.getElementById('date').value;
+            const note = document.getElementById('note').value;
             
             if (!amount || parseFloat(amount) <= 0) {
                 alert('请输入有效的金额');
@@ -551,11 +566,12 @@
                     headers: {
                         'Content-Type': 'application/json'
                     },
-                    body: JSON.stringify({ amount, category, date })
+                    body: JSON.stringify({ amount, category, date, note })
                 });
                 
                 document.getElementById('amount').value = '';
                 document.getElementById('date').value = '';
+                document.getElementById('note').value = '';
                 
                 const expenseDate = new Date(date);
                 if (expenseDate.getFullYear() === currentYear && expenseDate.getMonth() === currentMonth) {
