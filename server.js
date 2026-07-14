@@ -5,7 +5,7 @@ const initSqlJs = require('sql.js');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const DB_PATH = path.join(__dirname, 'expenses.db');
+const DB_PATH = process.env.DB_PATH || path.join(__dirname, 'expenses.db');
 
 let db = null;
 
