@@ -21,7 +21,7 @@ async function initDB() {
         category TEXT NOT NULL,
         date TEXT NOT NULL,
         note TEXT,
-        created_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW()))
+        created_at INTEGER DEFAULT (EXTRACT(EPOCH FROM NOW())::INTEGER)
       )
     `);
     console.log('Database initialized');
