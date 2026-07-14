@@ -45,8 +45,32 @@ app.use(express.json());
 app.use(express.static(path.join(__dirname, '.')));
 
 app.get('/api/expenses', (req, res) => {
-  const stmt = db.prepare('SELECT * FROM expenses ORDER BY date DESC, created_at DESC');
+  const { start, end } = req.query;
+  
+  let sql = 'SELECT * FROM expenses';
+  const params = [];
+  
+  if (start || end) {
+    sql += ' WHERE ';
+    const conditions = [];
+    if (start) {
+      conditions.push('date >= ?');
+      params.push(start);
+    }
+    if (end) {
+      conditions.push('date <= ?');
+      params.push(end);
+    }
+    sql += conditions.join(' AND ');
+  }
+  
+  sql += ' ORDER BY date DESC, created_at DESC';
+  
+  const stmt = db.prepare(sql);
   const expenses = [];
+  if (params.length > 0) {
+    stmt.bind(params);
+  }
   while (stmt.step()) {
     expenses.push(stmt.getAsObject());
   }
