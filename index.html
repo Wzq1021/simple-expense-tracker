@@ -423,6 +423,142 @@
             color: #667eea;
         }
         
+        .add-account-btn {
+            padding: 8px 12px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            transition: opacity 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        
+        .add-account-btn:hover {
+            opacity: 0.9;
+        }
+        
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.5);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+        
+        .modal-overlay.show {
+            display: flex;
+        }
+        
+        .modal {
+            background: white;
+            border-radius: 16px;
+            padding: 24px;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+        }
+        
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        
+        .modal-header h3 {
+            font-size: 18px;
+            color: #1a1a2e;
+        }
+        
+        .modal-close {
+            width: 32px;
+            height: 32px;
+            border: none;
+            background: #f5f5f5;
+            border-radius: 8px;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #999;
+        }
+        
+        .modal-close:hover {
+            background: #ffebee;
+            color: #e74c3c;
+        }
+        
+        .emoji-selector {
+            display: grid;
+            grid-template-columns: repeat(8, 1fr);
+            gap: 8px;
+            margin-bottom: 16px;
+        }
+        
+        .emoji-option {
+            width: 100%;
+            aspect-ratio: 1;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 24px;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        .emoji-option:hover {
+            border-color: #667eea;
+            transform: scale(1.1);
+        }
+        
+        .emoji-option.selected {
+            border-color: #667eea;
+            background: #f0f0ff;
+        }
+        
+        .modal-footer {
+            display: flex;
+            gap: 12px;
+            margin-top: 20px;
+        }
+        
+        .modal-footer button {
+            flex: 1;
+            padding: 12px;
+            border-radius: 10px;
+            font-size: 15px;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: opacity 0.2s;
+        }
+        
+        .modal-footer .cancel-btn {
+            background: #f5f5f5;
+            color: #666;
+        }
+        
+        .modal-footer .confirm-btn {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .modal-footer button:hover {
+            opacity: 0.9;
+        }
+        
         .account-list {
             display: grid;
             grid-template-columns: 1fr;
@@ -514,9 +650,35 @@
         <div class="accounts-section" id="accountsSection">
             <div class="accounts-header">
                 <h2>资金总览</h2>
-                <span class="accounts-total" id="totalBalance">¥0.00</span>
+                <div style="display: flex; align-items: center; gap: 12px;">
+                    <span class="accounts-total" id="totalBalance">¥0.00</span>
+                    <button class="add-account-btn" onclick="openAddAccountModal()">
+                        <span>+</span> 添加账户
+                    </button>
+                </div>
             </div>
             <div class="account-list" id="accountList"></div>
+        </div>
+        
+        <div class="modal-overlay" id="addAccountModal">
+            <div class="modal">
+                <div class="modal-header">
+                    <h3>添加账户</h3>
+                    <button class="modal-close" onclick="closeAddAccountModal()">×</button>
+                </div>
+                <div class="form-group">
+                    <label for="newAccountName">账户名称</label>
+                    <input type="text" id="newAccountName" placeholder="例如：银联、京东白条">
+                </div>
+                <div class="form-group">
+                    <label>选择图标</label>
+                    <div class="emoji-selector" id="emojiSelector"></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="cancel-btn" onclick="closeAddAccountModal()">取消</button>
+                    <button class="confirm-btn" onclick="confirmAddAccount()">确定</button>
+                </div>
+            </div>
         </div>
         
         <div class="form-section">
@@ -918,6 +1080,73 @@
                 console.error('删除失败:', error);
             }
         }
+        
+        const emojiOptions = ['💰', '💬', '📱', '💳', '💵', '🏦', '📦', '💎', '🎁', '🎒', '🎭', '🎪', '🏠', '🚗', '✈️', '🚀'];
+        let selectedEmoji = '💰';
+        
+        function renderEmojiSelector() {
+            const selector = document.getElementById('emojiSelector');
+            selector.innerHTML = emojiOptions.map(emoji => `
+                <button class="emoji-option ${selectedEmoji === emoji ? 'selected' : ''}" 
+                        onclick="selectEmoji('${emoji}')">
+                    ${emoji}
+                </button>
+            `).join('');
+        }
+        
+        function selectEmoji(emoji) {
+            selectedEmoji = emoji;
+            renderEmojiSelector();
+        }
+        
+        function openAddAccountModal() {
+            selectedEmoji = '💰';
+            document.getElementById('newAccountName').value = '';
+            renderEmojiSelector();
+            document.getElementById('addAccountModal').classList.add('show');
+        }
+        
+        function closeAddAccountModal() {
+            document.getElementById('addAccountModal').classList.remove('show');
+        }
+        
+        async function confirmAddAccount() {
+            const name = document.getElementById('newAccountName').value.trim();
+            
+            if (!name) {
+                alert('请输入账户名称');
+                return;
+            }
+            
+            const exists = accounts.some(acc => acc.name === name);
+            if (exists) {
+                alert('该账户名称已存在');
+                return;
+            }
+            
+            try {
+                await fetch('/api/accounts', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ name, icon: selectedEmoji })
+                });
+                
+                closeAddAccountModal();
+                await loadAccounts();
+                await refreshData();
+            } catch (error) {
+                alert('添加失败，请重试');
+                console.error('添加账户失败:', error);
+            }
+        }
+        
+        document.getElementById('addAccountModal').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('addAccountModal')) {
+                closeAddAccountModal();
+            }
+        });
         
         document.addEventListener('DOMContentLoaded', async () => {
             const today = new Date().toISOString().split('T')[0];
