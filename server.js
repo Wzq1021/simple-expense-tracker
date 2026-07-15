@@ -172,6 +172,29 @@ app.get('/api/expenses', async (req, res) => {
   }
 });
 
+app.get('/api/expenses/:id', async (req, res) => {
+  const { id } = req.params;
+
+  if (usePostgres) {
+    try {
+      const result = await pool.query('SELECT * FROM expenses WHERE id = $1', [id]);
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: '记录不存在' });
+      }
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error fetching expense:', error);
+      res.status(500).json({ error: '获取数据失败' });
+    }
+  } else {
+    const expense = db.expenses.find(e => e.id === id);
+    if (!expense) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+    res.json(expense);
+  }
+});
+
 app.post('/api/expenses', async (req, res) => {
   const { type, amount, category, account, to_account, date, note } = req.body;
 
@@ -205,6 +228,59 @@ app.post('/api/expenses', async (req, res) => {
   } else {
     db.expenses.push(newExpense);
     res.status(201).json(newExpense);
+  }
+});
+
+app.put('/api/expenses/:id', async (req, res) => {
+  const { id } = req.params;
+  const { type, amount, category, account, to_account, date, note } = req.body;
+
+  if (!amount || amount <= 0) {
+    return res.status(400).json({ error: '请输入有效的金额' });
+  }
+
+  if (!category) {
+    return res.status(400).json({ error: '请选择分类' });
+  }
+
+  if (!date) {
+    return res.status(400).json({ error: '请选择日期' });
+  }
+
+  if (usePostgres) {
+    try {
+      const result = await pool.query(
+        'UPDATE expenses SET type = $1, amount = $2, category = $3, account = $4, to_account = $5, date = $6, note = $7 WHERE id = $8 RETURNING *',
+        [type || 'expense', parseFloat(amount), category, account || '', to_account || '', date, note || '', id]
+      );
+
+      if (result.rowCount === 0) {
+        return res.status(404).json({ error: '记录不存在' });
+      }
+
+      res.json(result.rows[0]);
+    } catch (error) {
+      console.error('Error updating expense:', error);
+      res.status(500).json({ error: '更新失败' });
+    }
+  } else {
+    const index = db.expenses.findIndex(e => e.id === id);
+    if (index === -1) {
+      return res.status(404).json({ error: '记录不存在' });
+    }
+
+    db.expenses[index] = {
+      ...db.expenses[index],
+      type: type || 'expense',
+      amount: parseFloat(amount),
+      category,
+      account: account || '',
+      to_account: to_account || '',
+      date,
+      note: note || ''
+    };
+
+    res.json(db.expenses[index]);
   }
 });
 

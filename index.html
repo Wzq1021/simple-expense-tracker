@@ -248,6 +248,7 @@
             padding: 14px 16px;
             border-bottom: 1px solid var(--border);
             transition: background 0.1s;
+            position: relative;
         }
 
         .record-item:last-child {
@@ -315,9 +316,16 @@
             color: var(--primary);
         }
 
-        .record-delete {
+        .record-actions {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .record-edit {
             font-size: 12px;
-            color: var(--text-tertiary);
+            color: var(--primary);
             background: none;
             border: none;
             padding: 2px 6px;
@@ -326,6 +334,18 @@
             transition: opacity 0.2s;
         }
 
+        .record-delete {
+            font-size: 14px;
+            color: #d4756a;
+            background: none;
+            border: none;
+            padding: 2px 6px;
+            border-radius: 4px;
+            opacity: 0;
+            transition: opacity 0.2s;
+        }
+
+        .record-item:hover .record-edit,
         .record-item:hover .record-delete {
             opacity: 1;
         }
@@ -1778,12 +1798,32 @@
             }
         }
 
-        function openBottomSheet(tab) {
+        let editingId = null;
+
+        function openBottomSheet(tab, record = null) {
+            editingId = record ? record.id : null;
             document.getElementById('sheetOverlay').classList.add('show');
             document.getElementById('bottomSheet').classList.add('show');
-            selectedCategory = '';
-            if (tab) switchTab(tab);
-            else renderCategoryGrid();
+            
+            if (record) {
+                switchTab(record.type);
+                document.getElementById('amount').value = record.amount;
+                document.getElementById('date').value = record.date;
+                document.getElementById('note').value = record.note || '';
+                document.getElementById('account').value = record.account || '';
+                document.getElementById('toAccount').value = record.to_account || '';
+                selectedCategory = record.category;
+                renderCategoryGrid();
+            } else {
+                document.getElementById('amount').value = '';
+                document.getElementById('date').value = new Date().toISOString().split('T')[0];
+                document.getElementById('note').value = '';
+                document.getElementById('account').value = '';
+                document.getElementById('toAccount').value = '';
+                selectedCategory = '';
+                if (tab) switchTab(tab);
+                else renderCategoryGrid();
+            }
             document.getElementById('amount').focus();
         }
 
@@ -2012,7 +2052,7 @@
 
             return `
                 <div class="record-item" data-id="${item.id}">
-                    <div class="record-left">
+                    <div class="record-left" onclick="editExpense('${item.id}')">
                         <div class="record-icon" style="background: ${cat.bg}; color: ${cat.color};">${cat.icon}</div>
                         <div class="record-info">
                             <div class="record-category">${item.category}</div>
@@ -2022,7 +2062,10 @@
                     <div class="record-right">
                         <div class="record-amount ${amountClass}">${amountPrefix}¥${parseFloat(item.amount).toFixed(2)}</div>
                     </div>
-                    <button class="record-delete" onclick="deleteExpense('${item.id}')">×</button>
+                    <div class="record-actions">
+                        <button class="record-edit" onclick="editExpense('${item.id}')">✎</button>
+                        <button class="record-delete" onclick="deleteExpense('${item.id}')">×</button>
+                    </div>
                 </div>
             `;
         }
@@ -2098,21 +2141,46 @@
             }
 
             try {
-                await fetch('/api/expenses', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ type: currentTab, amount, category, account, to_account: toAccount, date, note })
-                });
+                const data = { type: currentTab, amount, category, account, to_account: toAccount, date, note };
+                
+                if (editingId) {
+                    await fetch(`/api/expenses/${editingId}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                } else {
+                    await fetch('/api/expenses', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(data)
+                    });
+                }
 
                 document.getElementById('amount').value = '';
-                document.getElementById('date').value = '';
+                document.getElementById('date').value = new Date().toISOString().split('T')[0];
                 document.getElementById('note').value = '';
                 selectedCategory = '';
+                editingId = null;
 
                 closeBottomSheet();
                 refreshData();
             } catch (error) {
                 alert('保存失败，请重试');
+            }
+        }
+
+        async function editExpense(id) {
+            try {
+                const response = await fetch(`/api/expenses/${id}`);
+                const record = await response.json();
+                if (record.error) {
+                    alert('获取记录失败');
+                    return;
+                }
+                openBottomSheet(record.type, record);
+            } catch (error) {
+                alert('获取记录失败');
             }
         }
 
