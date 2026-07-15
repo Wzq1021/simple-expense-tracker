@@ -1,8 +1,11 @@
 const express = require('express');
 const path = require('path');
+const multer = require('multer');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+
+const upload = multer({ dest: '/tmp/' });
 
 let db = {
   accounts: [
@@ -478,6 +481,85 @@ app.get('/api/debug', async (req, res) => {
   } else {
     const filtered = [...db.expenses].sort((a, b) => new Date(b.date) - new Date(a.date) || b.created_at - a.created_at);
     res.json(filtered);
+  }
+});
+
+app.post('/api/voice', upload.single('audio'), async (req, res) => {
+  const fs = require('fs');
+  const crypto = require('crypto');
+
+  if (!req.file) {
+    return res.status(400).json({ error: '未收到音频文件' });
+  }
+
+  const baiduApiKey = process.env.BAIDU_API_KEY;
+  const baiduSecretKey = process.env.BAIDU_SECRET_KEY;
+
+  if (!baiduApiKey || !baiduSecretKey) {
+    console.log('未配置百度语音识别API，使用模拟模式');
+    const mockTexts = [
+      '今天中午吃饭吃的老乡鸡花了19块钱',
+      '昨天打车花了35块',
+      '工资收入5000元',
+      '今天买衣服花了200元',
+      '昨天晚上看电影花了80块'
+    ];
+    const randomText = mockTexts[Math.floor(Math.random() * mockTexts.length)];
+    setTimeout(() => {
+      fs.unlinkSync(req.file.path);
+      res.json({ text: randomText });
+    }, 500);
+    return;
+  }
+
+  try {
+    const audioBuffer = fs.readFileSync(req.file.path);
+    fs.unlinkSync(req.file.path);
+
+    const speechData = audioBuffer.toString('base64');
+    const speechLen = audioBuffer.length;
+
+    const authResponse = await fetch('https://aip.baidubce.com/oauth/2.0/token', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        grant_type: 'client_credentials',
+        client_id: baiduApiKey,
+        client_secret: baiduSecretKey
+      })
+    });
+
+    const authData = await authResponse.json();
+    if (!authData.access_token) {
+      return res.status(500).json({ error: '获取访问令牌失败' });
+    }
+
+    const speechResponse = await fetch(`https://vop.baidu.com/server_api?cuid=${crypto.randomUUID()}&token=${authData.access_token}`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        format: 'webm',
+        rate: 16000,
+        speech: speechData,
+        len: speechLen,
+        channel: 1,
+        lan: 'zh'
+      })
+    });
+
+    const speechResult = await speechResponse.json();
+
+    if (speechResult.err_no === 0) {
+      res.json({ text: speechResult.result[0] });
+    } else {
+      res.status(500).json({ error: speechResult.err_msg || '语音识别失败' });
+    }
+  } catch (error) {
+    console.error('语音识别错误:', error);
+    if (fs.existsSync(req.file.path)) {
+      fs.unlinkSync(req.file.path);
+    }
+    res.status(500).json({ error: '语音识别服务异常' });
   }
 });
 
