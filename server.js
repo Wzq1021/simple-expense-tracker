@@ -486,17 +486,15 @@ app.get('/api/debug', async (req, res) => {
 
 app.post('/api/voice', upload.single('audio'), async (req, res) => {
   const fs = require('fs');
-  const crypto = require('crypto');
 
   if (!req.file) {
     return res.status(400).json({ error: '未收到音频文件' });
   }
 
-  const baiduApiKey = process.env.BAIDU_API_KEY;
-  const baiduSecretKey = process.env.BAIDU_SECRET_KEY;
+  const openaiApiKey = process.env.OPENAI_API_KEY;
 
-  if (!baiduApiKey || !baiduSecretKey) {
-    console.log('未配置百度语音识别API，使用模拟模式');
+  if (!openaiApiKey) {
+    console.log('未配置OpenAI API Key，使用模拟模式');
     const mockTexts = [
       '今天中午吃饭吃的老乡鸡花了19块钱',
       '昨天打车花了35块',
@@ -513,47 +511,34 @@ app.post('/api/voice', upload.single('audio'), async (req, res) => {
   }
 
   try {
-    const audioBuffer = fs.readFileSync(req.file.path);
+    const audioStream = fs.createReadStream(req.file.path);
+    
+    const formData = new (require('form-data'))();
+    formData.append('file', audioStream, { filename: 'voice.webm', contentType: 'audio/webm' });
+    formData.append('model', 'whisper-1');
+    formData.append('language', 'zh');
+    formData.append('response_format', 'json');
+
+    const response = await fetch('https://api.openai.com/v1/audio/transcriptions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        ...formData.getHeaders()
+      },
+      body: formData
+    });
+
     fs.unlinkSync(req.file.path);
 
-    const speechData = audioBuffer.toString('base64');
-    const speechLen = audioBuffer.length;
-
-    const authResponse = await fetch('https://aip.baidubce.com/oauth/2.0/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        grant_type: 'client_credentials',
-        client_id: baiduApiKey,
-        client_secret: baiduSecretKey
-      })
-    });
-
-    const authData = await authResponse.json();
-    if (!authData.access_token) {
-      return res.status(500).json({ error: '获取访问令牌失败' });
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API错误:', errorData);
+      return res.status(response.status).json({ error: errorData.error?.message || '语音识别失败' });
     }
 
-    const speechResponse = await fetch(`https://vop.baidu.com/server_api?cuid=${crypto.randomUUID()}&token=${authData.access_token}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        format: 'webm',
-        rate: 16000,
-        speech: speechData,
-        len: speechLen,
-        channel: 1,
-        lan: 'zh'
-      })
-    });
+    const result = await response.json();
+    res.json({ text: result.text });
 
-    const speechResult = await speechResponse.json();
-
-    if (speechResult.err_no === 0) {
-      res.json({ text: speechResult.result[0] });
-    } else {
-      res.status(500).json({ error: speechResult.err_msg || '语音识别失败' });
-    }
   } catch (error) {
     console.error('语音识别错误:', error);
     if (fs.existsSync(req.file.path)) {
