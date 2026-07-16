@@ -548,6 +548,220 @@ app.post('/api/voice', upload.single('audio'), async (req, res) => {
   }
 });
 
+app.post('/api/parse-text', async (req, res) => {
+  const { text } = req.body;
+
+  if (!text) {
+    return res.status(400).json({ error: '请输入文本' });
+  }
+
+  const openaiApiKey = process.env.OPENAI_API_KEY;
+
+  if (!openaiApiKey) {
+    console.log('未配置OpenAI API Key，使用正则解析');
+    const result = parseTextWithRegex(text);
+    return res.json({ success: true, data: result });
+  }
+
+  try {
+    const systemPrompt = `你是一个智能记账助手，需要从用户的语音文本中提取结构化的记账信息。
+
+支出分类：餐饮、交通、购物、娱乐、居住、医疗、教育、其他
+收入分类：工资、奖金、理财、其他
+转账：从一个账户转到另一个账户
+
+请分析以下文本，提取以下字段：
+- type: expense（支出）、income（收入）、transfer（转账），默认expense
+- amount: 金额（数字），必须提取
+- category: 分类，从上面的分类中选择最合适的
+- date: 日期，格式YYYY-MM-DD，如"今天"则为今天，"昨天"则为昨天，"前天"则为前天，没有提到日期则为今天
+- note: 备注，提取有用的描述信息（如商家名称、具体物品等）
+- account: 账户（可选，如支付宝、微信、银行卡等）
+- to_account: 转账目标账户（仅transfer类型需要）
+
+请返回严格的JSON格式，不要包含其他内容。
+
+示例：
+输入："今天中午吃饭吃的老乡鸡花了19块钱"
+输出：{"type":"expense","amount":19,"category":"餐饮","date":"2026-07-16","note":"老乡鸡"}
+
+输入："工资收入5000元"
+输出：{"type":"income","amount":5000,"category":"工资","date":"2026-07-16","note":"工资"}
+
+输入："从微信转500块到银行卡"
+输出：{"type":"transfer","amount":500,"category":"转账","date":"2026-07-16","note":"","account":"微信","to_account":"银行卡"}
+
+输入："昨天打车花了35块"
+输出：{"type":"expense","amount":35,"category":"交通","date":"2026-07-15","note":"打车"}`;
+
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${openaiApiKey}`,
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          { role: 'system', content: systemPrompt },
+          { role: 'user', content: text }
+        ],
+        temperature: 0,
+        max_tokens: 200
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      console.error('OpenAI API错误:', errorData);
+      const fallbackResult = parseTextWithRegex(text);
+      return res.json({ success: true, data: fallbackResult });
+    }
+
+    const result = await response.json();
+    const jsonStr = result.choices[0].message.content.replace(/```json|```/g, '').trim();
+    
+    try {
+      const parsedData = JSON.parse(jsonStr);
+      res.json({ success: true, data: parsedData });
+    } catch (e) {
+      console.error('JSON解析失败:', jsonStr);
+      const fallbackResult = parseTextWithRegex(text);
+      res.json({ success: true, data: fallbackResult });
+    }
+
+  } catch (error) {
+    console.error('文本解析错误:', error);
+    const fallbackResult = parseTextWithRegex(text);
+    res.json({ success: true, data: fallbackResult });
+  }
+});
+
+function parseTextWithRegex(text) {
+  const result = {
+    type: 'expense',
+    amount: '',
+    category: '',
+    date: '',
+    note: '',
+    account: '',
+    to_account: ''
+  };
+
+  const today = new Date();
+  const formatDate = (d) => {
+    const year = d.getFullYear();
+    const month = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
+  if (text.includes('今天') || text.includes('今日') || !text.match(/(昨天|前天|明天|上周|上月|\d{1,2}月\d{1,2}日|\d{4}-\d{2}-\d{2})/)) {
+    result.date = formatDate(today);
+  } else if (text.includes('昨天')) {
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    result.date = formatDate(yesterday);
+  } else if (text.includes('前天')) {
+    const dayBefore = new Date(today);
+    dayBefore.setDate(dayBefore.getDate() - 2);
+    result.date = formatDate(dayBefore);
+  }
+
+  const cnNumMap = { '零': 0, '一': 1, '二': 2, '三': 3, '四': 4, '五': 5, '六': 6, '七': 7, '八': 8, '九': 9, '十': 10, '百': 100, '千': 1000 };
+  const cnNumRegex = /([零一二三四五六七八九十百千]+)(块|元|块钱|元钱|块儿)?/g;
+  
+  let cnMatch;
+  while ((cnMatch = cnNumRegex.exec(text)) !== null) {
+    const cnNum = cnMatch[1];
+    let num = 0;
+    let temp = 0;
+    
+    for (let i = 0; i < cnNum.length; i++) {
+      const char = cnNum[i];
+      if (char === '十') {
+        temp = temp === 0 ? 10 : temp * 10;
+        num += temp;
+        temp = 0;
+      } else if (char === '百') {
+        temp = temp === 0 ? 100 : temp * 100;
+        num += temp;
+        temp = 0;
+      } else if (char === '千') {
+        temp = temp === 0 ? 1000 : temp * 1000;
+        num += temp;
+        temp = 0;
+      } else {
+        temp = cnNumMap[char];
+      }
+    }
+    num += temp;
+    
+    if (num > 0 && num <= 100000) {
+      result.amount = num;
+      break;
+    }
+  }
+
+  if (!result.amount) {
+    const numMatch = text.match(/(\d+(?:\.\d+)?)\s*(块|元|块钱|元钱|块儿)/);
+    if (numMatch) {
+      result.amount = parseFloat(numMatch[1]);
+    }
+  }
+
+  if (text.includes('收入') || text.includes('工资') || text.includes('奖金') || text.includes('理财') || text.includes('利息')) {
+    result.type = 'income';
+    if (!result.category) {
+      if (text.includes('工资')) result.category = '工资';
+      else if (text.includes('奖金')) result.category = '奖金';
+      else if (text.includes('理财') || text.includes('利息')) result.category = '理财';
+      else result.category = '其他';
+    }
+  } else if (text.includes('转') && text.includes('到')) {
+    result.type = 'transfer';
+    result.category = '转账';
+    const transferMatch = text.match(/(从|用)(.+?)(转)/);
+    if (transferMatch) result.account = transferMatch[2].trim();
+    const toMatch = text.match(/(到)(.+?)(块|元|$)/);
+    if (toMatch) result.to_account = toMatch[2].trim();
+  } else {
+    result.type = 'expense';
+    if (!result.category) {
+      if (text.includes('吃') || text.includes('饭') || text.includes('餐') || text.includes('菜') || text.includes('老乡鸡')) result.category = '餐饮';
+      else if (text.includes('车') || text.includes('打车') || text.includes('滴滴') || text.includes('公交') || text.includes('地铁') || text.includes('加油')) result.category = '交通';
+      else if (text.includes('买') || text.includes('购物') || text.includes('衣服') || text.includes('鞋') || text.includes('超市')) result.category = '购物';
+      else if (text.includes('电影') || text.includes('玩') || text.includes('娱乐') || text.includes('KTV') || text.includes('游戏')) result.category = '娱乐';
+      else if (text.includes('房租') || text.includes('水电') || text.includes('物业')) result.category = '居住';
+      else if (text.includes('医院') || text.includes('药') || text.includes('看病') || text.includes('体检')) result.category = '医疗';
+      else if (text.includes('学') || text.includes('书') || text.includes('培训') || text.includes('教育')) result.category = '教育';
+      else result.category = '其他';
+    }
+  }
+
+  const categoryKeywords = ['餐饮', '交通', '购物', '娱乐', '居住', '医疗', '教育', '其他', '工资', '奖金', '理财', '转账'];
+  const dateKeywords = ['今天', '昨天', '前天', '明天', '上周', '上月'];
+  let noteText = text;
+  
+  if (result.amount) {
+    noteText = noteText.replace(new RegExp(`(${result.amount})(块|元|块钱|元钱)?`, 'g'), '');
+  }
+  categoryKeywords.forEach(kw => {
+    noteText = noteText.replace(new RegExp(kw, 'g'), '');
+  });
+  dateKeywords.forEach(kw => {
+    noteText = noteText.replace(new RegExp(kw, 'g'), '');
+  });
+  noteText = noteText.replace(/(收入|支出|花了|花|转|到|从|用)/g, '');
+  noteText = noteText.replace(/\s+/g, '').trim();
+  
+  if (noteText.length > 0) {
+    result.note = noteText;
+  }
+
+  return result;
+}
+
 app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
